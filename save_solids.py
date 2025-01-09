@@ -1,6 +1,6 @@
 import numpy as np
 import open3d as o3d
-from solids import generate_sphere, generate_cube, generate_cone, generate_tetrahedron, generate_square_pyramid, generate_octahedron
+from solids import generate_sphere, generate_cube, generate_cone, generate_tetrahedron, generate_square_pyramid, generate_octahedron, visualize_point_cloud
 
 def save_point_cloud(points, filename):
     cloud = o3d.geometry.PointCloud()

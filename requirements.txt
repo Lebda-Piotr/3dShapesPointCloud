@@ -1,0 +1,9 @@
+fastapi
+joblib
+numpy
+plyfile
+scikit-learn
+scipy
+open3d
+uvicorn
+python-multipart

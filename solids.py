@@ -1,8 +1,8 @@
 import numpy as np
 import open3d as o3d
 
-def generate_sphere(num_points=1000):
-    radius = np.random.uniform(0.5, 2.0)  
+def generate_sphere(num_points=1000, radius=None):
+    radius = radius if radius is not None else np.random.uniform(0.5, 2.0)  
     points = []
     for _ in range(num_points):
         phi = np.random.uniform(0, np.pi)
@@ -13,8 +13,8 @@ def generate_sphere(num_points=1000):
         points.append([x, y, z])
     return np.array(points)
 
-def generate_cube(num_points=1000):
-    edge_length = np.random.uniform(0.5, 2.0)  
+def generate_cube(num_points=1000, edge_length=None):
+    edge_length = edge_length if edge_length is not None else np.random.uniform(0.5, 2.0)  
     points = []
     for _ in range(num_points):
         face = np.random.choice(6)
@@ -45,9 +45,9 @@ def generate_cube(num_points=1000):
         points.append([x, y, z])
     return np.array(points)
 
-def generate_cone(num_points=1000):
-    radius = np.random.uniform(0.5, 2.0)  
-    height = np.random.uniform(0.5, 4.0)  
+def generate_cone(num_points=1000, radius=None, height=None):
+    radius = radius if radius is not None else np.random.uniform(0.5, 2.0)
+    height = height if height is not None else np.random.uniform(0.5, 4.0)
     points = []
     for _ in range(num_points):
         # Generowanie punktów na powierzchni bocznej stożka
@@ -69,8 +69,8 @@ def generate_cone(num_points=1000):
     
     return np.array(points)
 
-def generate_tetrahedron(num_points=1000):
-    edge_length = np.random.uniform(0.5, 2.0) 
+def generate_tetrahedron(num_points=1000, edge_length=None):
+    edge_length = edge_length if edge_length is not None else np.random.uniform(0.5, 2.0)
     vertices = np.array([[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]], dtype=np.float64)
     vertices *= edge_length / np.sqrt(3)
     faces = [[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]]
@@ -86,9 +86,9 @@ def generate_tetrahedron(num_points=1000):
         points.append(point)
     return np.array(points)
 
-def generate_square_pyramid(num_points=1000):
-    base_length = np.random.uniform(0.5, 4.0)
-    height = np.random.uniform(0.5, 4.0)
+def generate_square_pyramid(num_points=1000, base_length=None, height=None):
+    base_length = base_length if base_length is not None else np.random.uniform(0.5, 4.0)
+    height = height if height is not None else np.random.uniform(0.5, 4.0)
     base_points = np.array([
         [-base_length/2, -base_length/2, 0],
         [base_length/2, -base_length/2, 0],
@@ -114,11 +114,10 @@ def generate_square_pyramid(num_points=1000):
         u, v = np.random.uniform(size=2)
         point = a * (1 - u) * (1 - v) + b * u * (1 - v) + c * u * v + d * (1 - u) * v
         points.append(point)
-
     return np.array(points)
 
-def generate_octahedron(num_points=1000):
-    edge_length = np.random.uniform(0.5, 2.0)
+def generate_octahedron(num_points=1000, edge_length=None):
+    edge_length = edge_length if edge_length is not None else np.random.uniform(0.5, 2.0)
     vertices = np.array([[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]], dtype=np.float64)
     vertices *= edge_length / np.sqrt(2)
     faces = [[0, 2, 4], [0, 3, 4], [1, 2, 4], [1, 3, 4], [0, 2, 5], [0, 3, 5], [1, 2, 5], [1, 3, 5]]
