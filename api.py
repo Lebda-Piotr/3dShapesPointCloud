@@ -4,7 +4,7 @@ from sklearn.preprocessing import StandardScaler
 from tensorflow.keras.models import load_model, save_model, Sequential
 import numpy as np
 import os
-from analyze import accuracy_score, classification_report, confusion_matrix
+from analyze import generate_test_data, evaluate_model, plot_classification_report, generate_confusion_matrix, generate_normalized_confusion_matrix, plot_roc_curve
 import shutil
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -50,6 +50,11 @@ def create_zip(model_path, scaler_path, label_mapping_path, zip_path):
         zf.write(model_path, os.path.basename(model_path))
         zf.write(scaler_path, os.path.basename(scaler_path))
         zf.write(label_mapping_path, os.path.basename(label_mapping_path))
+
+def create_zip2(files, zip_path):
+    with zipfile.ZipFile(zip_path, 'w') as zf:
+        for file in files:
+            zf.write(file, os.path.basename(file))
 
 @app.post("/train/")
 async def train_model_endpoint(
@@ -184,12 +189,12 @@ async def analyze(
     num_samples: int = Query(100, ge=1, description="Number of test samples to generate")
 ):
     try:
-        # Zapisanie pliku ZIP 
+        # Zapisanie pliku ZIP z modelem
         model_package_path = "temp_model_package.zip"
         with open(model_package_path, "wb") as buffer:
             shutil.copyfileobj(model_package.file, buffer)
 
-        # Rozpakowanie pliku ZIP
+        # Rozpakowanie modelu, skalera i mapowania etykiet
         with zipfile.ZipFile(model_package_path, 'r') as zf:
             temp_dir = "temp_extract"
             zf.extractall(temp_dir)
@@ -202,64 +207,38 @@ async def analyze(
         with open(os.path.join(temp_dir, "label_mapping.json"), "r", encoding='utf-8') as f:
             label_mapping = json.load(f)
 
-        # Pobranie listy kategorii
+        # Generowanie danych testowych
         classes = list(label_mapping.keys())
-        num_classes = len(classes)
+        data, labels = generate_test_data(classes, num_samples)
 
-        # Generowanie danych
-        samples_per_class = num_samples // num_classes
-        data = []
-        labels = []
-
-        for _ in range(samples_per_class):
-            for cls in classes:
-                if cls == "sphere":
-                    shape = generate_sphere()
-                elif cls == "cube":
-                    shape = generate_cube()
-                elif cls == "cone":
-                    shape = generate_cone()
-                elif cls == "tetrahedron":
-                    shape = generate_tetrahedron()
-                elif cls == "square_pyramid":
-                    shape = generate_square_pyramid()
-                elif cls == "octahedron":
-                    shape = generate_octahedron()
-                else:
-                    continue
-
-                data.append(feature_vector(shape))
-                labels.append(cls)
-
-        data = np.array(data)
-        labels = np.array(labels)
-
-        # Skalowanie
+        # Skalowanie danych testowych
         data_scaled = scaler.transform(data)
 
-        # Predykcja 
-        predictions = model.predict(data_scaled)
-        predicted_classes = np.argmax(predictions, axis=1)
-        predicted_labels = [list(label_mapping.keys())[list(label_mapping.values()).index(cls)] for cls in predicted_classes]
+        # Obliczenia metryk
+        accuracy, report, conf_matrix, predicted_labels = evaluate_model(model, data_scaled, labels, label_mapping)
 
-        # Ocena 
-        accuracy = accuracy_score(labels, predicted_labels)
-        report = classification_report(labels, predicted_labels, target_names=classes)
-        conf_matrix = confusion_matrix(labels, predicted_labels)
+        # Generowanie wizualizacji
+        matrix_file_path = generate_confusion_matrix(labels, predicted_labels, classes)
+        normalized_matrix_file_path = generate_normalized_confusion_matrix(labels, predicted_labels, classes)
+        report_file_path = plot_classification_report(report, classes)
+        roc_curve_file_path = plot_roc_curve(labels, predicted_labels, classes)
 
-        # Wizualizacja macierzy konfuzji
-        plt.figure(figsize=(10, 7))
-        sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=classes, yticklabels=classes)
-        plt.xlabel('Predicted')
-        plt.ylabel('True')
-        plt.title('Confusion Matrix')
-        plt.savefig('confusion_matrix.png')
+        # Sprawdzenie, czy pliki istnieją
+        if not os.path.exists(matrix_file_path):
+            raise HTTPException(status_code=500, detail="Confusion matrix file not found")
+        if not os.path.exists(normalized_matrix_file_path):
+            raise HTTPException(status_code=500, detail="Normalized confusion matrix file not found")
+        if not os.path.exists(report_file_path):
+            raise HTTPException(status_code=500, detail="Classification report file not found")
+        if not os.path.exists(roc_curve_file_path):
+            raise HTTPException(status_code=500, detail="ROC curve file not found")
 
-        return {
-            "accuracy": accuracy,
-            "classification_report": report,
-            "confusion_matrix": "confusion_matrix.png"
-        }
+        # Tworzenie pliku ZIP
+        zip_path = "analysis_results.zip"
+        create_zip2([matrix_file_path, normalized_matrix_file_path, report_file_path, roc_curve_file_path], zip_path)
+
+        # Zwrot pliku ZIP
+        return FileResponse(path=zip_path, filename=zip_path, media_type='application/zip')
 
     except Exception as e:
         print(f"Error: {e}")
